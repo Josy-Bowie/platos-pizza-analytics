@@ -6,6 +6,23 @@ venv/
 __pycache__/
 *.pyc
 
+
+# Base de données SQLite générée
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Données CSV brutes
+data/raw/
+
+# Variables d'environnement et secrets
+.env
+.env.*
+!.env.example
+
+
+
 # Jupyter Notebook
 .ipynb_checkpoints/
 
