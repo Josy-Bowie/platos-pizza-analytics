@@ -1,0 +1,23 @@
+# Environnements virtuels Python
+.venv/
+venv/
+
+# Fichiers temporaires Python
+__pycache__/
+*.pyc
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Secrets et configuration locale
+.env
+.streamlit/secrets.toml
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Bases de données locales
+*.db
+*.sqlite
+*.sqlite3
