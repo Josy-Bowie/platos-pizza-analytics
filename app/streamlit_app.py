@@ -1,4 +1,6 @@
 
+from pathlib import Path
+from src.create_db import creer_base
 import sys
 from pathlib import Path
 from src.create_db import creer_base
@@ -38,10 +40,10 @@ st.set_page_config(
 DB_FILE = PROJECT_ROOT / "data" / "pizza.db"
 
 if not DB_FILE.exists():
-    st.info("Initialisation de la base de données...")
-    creer_base()
+    with st.spinner("Initialisation de la base de données..."):
+        creer_base()
 
-    
+
 # =====================================================
 # 4. CHARGEMENT DES DONNEES
 # =====================================================
