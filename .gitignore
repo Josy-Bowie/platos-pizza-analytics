@@ -13,8 +13,14 @@ __pycache__/
 *.db-wal
 *.db-shm
 
-# Données CSV brutes
-data/raw/
+# Données CSV sources nécessaires au déploiement
+# Les quatre CSV de Plato's Pizza sont versionnés sur GitHub
+
+# Base SQLite générée automatiquement
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Variables d'environnement et secrets
 .env
