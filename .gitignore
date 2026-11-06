@@ -41,6 +41,20 @@ __pycache__/
 Thumbs.db
 
 # Bases de données locales
-*.db
 *.sqlite
 *.sqlite3
+
+# Autoriser uniquement les 4 CSV nécessaires au dashboard
+!data/
+!data/raw/
+data/raw/*
+!data/raw/orders.csv
+!data/raw/order_details.csv
+!data/raw/pizzas.csv
+!data/raw/pizza_types.csv
+
+# Ne jamais publier la base SQLite générée
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
