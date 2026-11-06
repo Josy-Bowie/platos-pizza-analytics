@@ -50,7 +50,7 @@ platos-pizza-analytics/
 └── README.md
 ```
 
-## 📈 Indicateurs clés — 2015
+## 📈 Indicateurs clés - 2015
 
 | Indicateur | Résultat |
 |---|---:|
@@ -155,4 +155,4 @@ Ce projet illustre une démarche de Data Analyst :
 - Analyses SQL et Pandas : terminées
 - Dashboard Streamlit : développé et testé localement
 - Publication du code sur GitHub : effectuée
-- Déploiement Streamlit Community Cloud : à venir
+- Déploiement Streamlit Community Cloud : terminé
