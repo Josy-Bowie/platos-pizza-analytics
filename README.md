@@ -1,5 +1,17 @@
 # 🍕 Plato's Pizza Analytics
 
+## 🚀 Dashboard interactif - Application en ligne
+
+**[🍕 Accéder au dashboard Plato's Pizza Analytics](https://platos-pizza-analytics-6jt4sos32puwrwbsvtdxav.streamlit.app)**
+
+Explorez les performances commerciales de Plato's Pizza en 2015 à travers un dashboard interactif développé avec Python, SQL, SQLite, Pandas, Plotly et Streamlit.
+
+Le dashboard comprend quatre pages :
+- **Vue d'ensemble** : indicateurs clés de performance.
+- **Analyse des ventes** : évolution du chiffre d'affaires et filtres interactifs.
+- **Analyse des produits** : classement des pizzas les plus vendues.
+- **Activité des commandes** : analyse des jours et heures de forte activité.
+
 ## 📊 Présentation du projet
 
 Ce projet de Data Analytics consiste à analyser les ventes de **Plato's Pizza** à partir des données de commandes de l'année 2015.
