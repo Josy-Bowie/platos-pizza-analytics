@@ -1,27 +1,36 @@
+# ==================================================
+# PROJET : PLATO'S PIZZA ANALYTICS
+# Application Streamlit
+# ==================================================
 
-from pathlib import Path
-from src.create_db import creer_base
+# 1. Importer les modules nécessaires
 import sys
 from pathlib import Path
-from src.create_db import creer_base
 import streamlit as st
 
 
-# =====================================================
+# ==================================================
 # 1. CONFIGURATION DES CHEMINS
-# =====================================================
+# ==================================================
 
+# Identifier la racine du projet
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Permet à Streamlit de trouver les fichiers du dossier src
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
-# =====================================================
+# ==================================================
 # 2. IMPORTATION DES FONCTIONS PYTHON
-# =====================================================
+# ==================================================
 
+# Fonction de création de la base SQLite
+from src.create_db import creer_base
+
+# Fonction de chargement des analyses SQL
 from src.run_analysis import charger_analyses
+
+# Fonction de chargement des données du dashboard
 from src.dashboard_data import charger_donnees_dashboard
 
 
