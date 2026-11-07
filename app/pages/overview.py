@@ -23,14 +23,24 @@ st.title("🍕 Vue d'ensemble")
 st.caption("Plato's Pizza | Performances commerciales 2015")
 
 
-# =====================================================
-# 3. RECUPERER LES INDICATEURS SQL
-# =====================================================
+
+# ============================================================
+# 3. RÉCUPÉRER LES INDICATEURS SQL
+# ============================================================
+
+# Diagnostic temporaire : vérifier les résultats SQL
+with st.expander("🔎 Diagnostic des indicateurs SQL"):
+    for question in ["question_1", "question_2", "question_3", "question_7"]:
+        st.write(f"Résultats de {question} :")
+        st.write(resultats[question])
+        st.write("Types des colonnes :", resultats[question].dtypes.astype(str))
 
 # Question 1 : chiffre d'affaires total
-ca = float(
-    resultats["question_1"]["chiffre_affaires_total"].iloc[0]
-)
+valeur_ca = resultats["question_1"]["chiffre_affaires_total"].iloc[0]
+st.write("Diagnostic CA :", repr(valeur_ca))
+st.write("Type CA :", type(valeur_ca).__name__)
+
+ca = float(valeur_ca)
 
 # Question 2 : panier moyen
 panier = float(
@@ -47,7 +57,6 @@ pizzas = int(
 commandes = int(
     resultats["question_7"]["nombre_commandes"].sum()
 )
-
 
 # =====================================================
 # 4. INDICATEURS DE PERFORMANCE
