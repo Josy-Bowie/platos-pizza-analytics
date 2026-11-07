@@ -49,38 +49,43 @@ def charger_analyses():
 
         conn.execute("PRAGMA foreign_keys = ON")
 
-        # Exécuter toutes les requêtes
-        for numero, requete in enumerate(requetes, start=1):
-
-            df = pd.read_sql_query(requete, conn)
-
-            resultats[f"question_{numero}"] = df
-
-    return resultats
-
-
         # Diagnostic temporaire : vérifier la base utilisée
-        print("BASE SQL :", DB_FILE.resolve())
+        print("\nBASE SQL :", DB_FILE.resolve())
 
         print(
             "COMMANDES SQL :",
-            conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+            conn.execute(
+                "SELECT COUNT(*) FROM orders"
+            ).fetchone()[0]
         )
 
         print(
             "LIGNES COMMANDES SQL :",
-            conn.execute("SELECT COUNT(*) FROM order_details").fetchone()[0]
+            conn.execute(
+                "SELECT COUNT(*) FROM order_details"
+            ).fetchone()[0]
         )
 
         # Exécuter toutes les requêtes
         for numero, requete in enumerate(requetes, start=1):
 
+            # Diagnostic : afficher la requête exécutée
+            print(f"\nQUESTION {numero}")
+            print("REQUETE SQL :", repr(requete[:300]))
+
+            # Exécuter la requête SQL
             df = pd.read_sql_query(requete, conn)
 
+            # Diagnostic : afficher le résultat
+            print(
+                "RESULTAT :",
+                df.head().to_string(index=False)
+            )
+
+            # Stocker le DataFrame
             resultats[f"question_{numero}"] = df
 
     return resultats
-
 
 
 # 3. Exécution directe du script Python
