@@ -15,19 +15,34 @@ def charger_donnees():
 resultats = charger_donnees()
 
 # ==================================================
-# DIAGNOSTIC : VÉRIFICATION DES RÉSULTATS SQL
+# DIAGNOSTIC : CONTENU DE LA BASE SQLITE
 # ==================================================
 
-with st.expander("🔎 Diagnostic des résultats SQL"):
-    st.write("Résultat de la question 1 :")
-    st.dataframe(resultats["question_1"])
+import sqlite3
+from pathlib import Path
 
-    st.write("Résultat de la question 2 :")
-    st.dataframe(resultats["question_2"])
+chemin_db = Path(__file__).resolve().parents[2] / "data" / "pizza.db"
 
-    st.write("Résultat de la question 3 :")
-    st.dataframe(resultats["question_3"])
+with st.expander("🔎 Diagnostic de la base SQLite"):
+    st.write("Chemin de la base :", str(chemin_db))
+    st.write("Base existante :", chemin_db.exists())
 
+    if chemin_db.exists():
+        with sqlite3.connect(chemin_db) as connexion:
+
+            tables = [
+                "orders",
+                "order_details",
+                "pizzas",
+                "pizza_types"
+            ]
+
+            for table in tables:
+                nombre = connexion.execute(
+                    f"SELECT COUNT(*) FROM {table}"
+                ).fetchone()[0]
+
+                st.write(f"{table} : {nombre:,} lignes")
 
 # =====================================================
 # 2. TITRE DE LA PAGE
