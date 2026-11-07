@@ -22,6 +22,11 @@ SQL_FILE = PROJECT_ROOT / "sql" / "02_business_analysis.sql"
 
 def charger_analyses():
 
+    print("BASE UTILISÉE :", DB_FILE.resolve(), flush=True)
+    print("SQL UTILISÉ :", SQL_FILE.resolve(), flush=True)
+
+    
+
     # Vérifier la présence des fichiers
     if not DB_FILE.is_file():
         raise FileNotFoundError(
