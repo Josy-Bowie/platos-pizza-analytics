@@ -44,6 +44,35 @@ with st.expander("🔎 Diagnostic de la base SQLite"):
 
                 st.write(f"{table} : {nombre:,} lignes")
 
+
+# ==================================================
+# DIAGNOSTIC : CALCUL DIRECT DANS LA BASE SQLITE
+# ==================================================
+
+with st.expander("🔎 Test direct des indicateurs"):
+    with sqlite3.connect(chemin_db) as connexion:
+
+        ca_direct = connexion.execute("""
+            SELECT ROUND(SUM(od.quantity * p.price), 2)
+            FROM order_details AS od
+            JOIN pizzas AS p
+                ON od.pizza_id = p.pizza_id
+        """).fetchone()[0]
+
+        commandes_direct = connexion.execute("""
+            SELECT COUNT(*)
+            FROM orders
+        """).fetchone()[0]
+
+        pizzas_direct = connexion.execute("""
+            SELECT SUM(quantity)
+            FROM order_details
+        """).fetchone()[0]
+
+        st.write("CA direct :", ca_direct)
+        st.write("Commandes directes :", commandes_direct)
+        st.write("Pizzas vendues directement :", pizzas_direct)
+
 # =====================================================
 # 2. TITRE DE LA PAGE
 # =====================================================
