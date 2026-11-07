@@ -15,17 +15,13 @@ def charger_analyses():
     # Lire les requêtes SQL
     query = SQL_FILE.read_text(encoding="utf-8")
 
-    # Supprimer les commentaires SQL et les lignes vides
+    # Supprimer les commentaires SQL
     lignes_sql = []
 
     for ligne in query.splitlines():
 
-        ligne = ligne.strip()
-
-        if not ligne or ligne.startswith("--"):
-            continue
-
-        lignes_sql.append(ligne)
+        if not ligne.strip().startswith("--"):
+            lignes_sql.append(ligne)
 
     query = "\n".join(lignes_sql)
 
@@ -45,13 +41,23 @@ def charger_analyses():
     # Stocker les DataFrames
     resultats = {}
 
-        # Connexion SQLite en lecture seule
+    # Connexion SQLite en lecture seule
     with sqlite3.connect(
         f"file:{DB_FILE.as_posix()}?mode=ro",
         uri=True
     ) as conn:
 
         conn.execute("PRAGMA foreign_keys = ON")
+
+        # Exécuter toutes les requêtes
+        for numero, requete in enumerate(requetes, start=1):
+
+            df = pd.read_sql_query(requete, conn)
+
+            resultats[f"question_{numero}"] = df
+
+    return resultats
+
 
         # Diagnostic temporaire : vérifier la base utilisée
         print("BASE SQL :", DB_FILE.resolve())
