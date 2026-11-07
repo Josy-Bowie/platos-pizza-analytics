@@ -53,6 +53,28 @@ if not DB_FILE.exists():
         creer_base()
 
 
+# ============================================
+# DIAGNOSTIC TEMPORAIRE : JOINTURE SQLITE
+# ============================================
+
+import sqlite3
+
+with st.expander("🔎 Diagnostic de la jointure SQLite"):
+
+    with sqlite3.connect(DB_FILE) as conn:
+
+        correspondances = conn.execute("""
+            SELECT COUNT(*)
+            FROM order_details AS od
+            INNER JOIN pizzas AS p
+                ON od.pizza_id = p.pizza_id
+        """).fetchone()[0]
+
+        st.write(
+            "Lignes correspondant à la jointure :",
+            correspondances
+        )
+
 # =====================================================
 # 4. CHARGEMENT DES DONNEES
 # =====================================================
