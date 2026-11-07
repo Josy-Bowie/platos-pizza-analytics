@@ -1,3 +1,4 @@
+
 import sqlite3
 import pandas as pd
 from pathlib import Path
@@ -14,12 +15,32 @@ def charger_analyses():
     # Lire les requêtes SQL
     query = SQL_FILE.read_text(encoding="utf-8")
 
+    # Supprimer les commentaires SQL et les lignes vides
+    lignes_sql = []
+
+    for ligne in query.splitlines():
+
+        ligne = ligne.strip()
+
+        if not ligne or ligne.startswith("--"):
+            continue
+
+        lignes_sql.append(ligne)
+
+    query = "\n".join(lignes_sql)
+
     # Séparer les requêtes
     requetes = [
         requete.strip()
         for requete in query.split(";")
         if requete.strip()
     ]
+
+    # Vérifier le nombre de requêtes SQL
+    if len(requetes) != 8:
+        raise ValueError(
+            f"8 requêtes SQL attendues, {len(requetes)} trouvées."
+        )
 
     # Stocker les DataFrames
     resultats = {}
