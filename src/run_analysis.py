@@ -45,13 +45,26 @@ def charger_analyses():
     # Stocker les DataFrames
     resultats = {}
 
-    # Connexion SQLite en lecture seule
+        # Connexion SQLite en lecture seule
     with sqlite3.connect(
         f"file:{DB_FILE.as_posix()}?mode=ro",
         uri=True
     ) as conn:
 
         conn.execute("PRAGMA foreign_keys = ON")
+
+        # Diagnostic temporaire : vérifier la base utilisée
+        print("BASE SQL :", DB_FILE.resolve())
+
+        print(
+            "COMMANDES SQL :",
+            conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+        )
+
+        print(
+            "LIGNES COMMANDES SQL :",
+            conn.execute("SELECT COUNT(*) FROM order_details").fetchone()[0]
+        )
 
         # Exécuter toutes les requêtes
         for numero, requete in enumerate(requetes, start=1):
