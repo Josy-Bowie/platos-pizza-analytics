@@ -4,7 +4,7 @@ from src.run_analysis import charger_analyses
 
 
 # =====================================================
-# 1. CHARGER LES ANALYSES SQL
+# 1. CHARGEMENT DES ANALYSES SQL
 # =====================================================
 
 @st.cache_data
@@ -14,110 +14,77 @@ def charger_donnees():
 
 resultats = charger_donnees()
 
-# ==================================================
-# DIAGNOSTIC : CONTENU DE LA BASE SQLITE
-# ==================================================
-
-import sqlite3
-from pathlib import Path
-
-chemin_db = Path(__file__).resolve().parents[2] / "data" / "pizza.db"
-
-with st.expander("🔎 Diagnostic de la base SQLite"):
-    st.write("Chemin de la base :", str(chemin_db))
-    st.write("Base existante :", chemin_db.exists())
-
-    if chemin_db.exists():
-        with sqlite3.connect(chemin_db) as connexion:
-
-            tables = [
-                "orders",
-                "order_details",
-                "pizzas",
-                "pizza_types"
-            ]
-
-            for table in tables:
-                nombre = connexion.execute(
-                    f"SELECT COUNT(*) FROM {table}"
-                ).fetchone()[0]
-
-                st.write(f"{table} : {nombre:,} lignes")
-
-
-# ==================================================
-# DIAGNOSTIC : CALCUL DIRECT DANS LA BASE SQLITE
-# ==================================================
-
-with st.expander("🔎 Test direct des indicateurs"):
-    with sqlite3.connect(chemin_db) as connexion:
-
-        ca_direct = connexion.execute("""
-            SELECT ROUND(SUM(od.quantity * p.price), 2)
-            FROM order_details AS od
-            JOIN pizzas AS p
-                ON od.pizza_id = p.pizza_id
-        """).fetchone()[0]
-
-        commandes_direct = connexion.execute("""
-            SELECT COUNT(*)
-            FROM orders
-        """).fetchone()[0]
-
-        pizzas_direct = connexion.execute("""
-            SELECT SUM(quantity)
-            FROM order_details
-        """).fetchone()[0]
-
-        st.write("CA direct :", ca_direct)
-        st.write("Commandes directes :", commandes_direct)
-        st.write("Pizzas vendues directement :", pizzas_direct)
 
 # =====================================================
-# 2. TITRE DE LA PAGE
+# 2. FONCTION DE VERIFICATION DES INDICATEURS
+# =====================================================
+
+def lire_indicateur(numero_question, colonne):
+    """
+    Récupère une valeur numérique depuis un résultat SQL.
+    Arrête la page si le résultat est vide ou manquant.
+    """
+    nom_question = f"question_{numero_question}"
+
+    if nom_question not in resultats:
+        st.error(f"Analyse SQL absente : {nom_question}")
+        st.stop()
+
+    df = resultats[nom_question]
+
+    if df.empty:
+        st.error(f"L'analyse {nom_question} ne retourne aucune ligne.")
+        st.stop()
+
+    if colonne not in df.columns:
+        st.error(
+            f"Colonne '{colonne}' absente dans {nom_question}."
+        )
+        st.stop()
+
+    valeur = df[colonne].iloc[0]
+
+    if valeur is None or st.session_state.get(
+        "_unused_check", False
+    ):
+        st.error(
+            f"L'analyse {nom_question} retourne une valeur NULL "
+            f"pour '{colonne}'. Vérifie le chargement SQL."
+        )
+        st.stop()
+
+    return valeur
+
+
+# =====================================================
+# 3. TITRE
 # =====================================================
 
 st.title("🍕 Vue d'ensemble")
 st.caption("Plato's Pizza | Performances commerciales 2015")
 
 
+# =====================================================
+# 4. INDICATEURS SQL
+# =====================================================
 
-# ============================================================
-# 3. RÉCUPÉRER LES INDICATEURS SQL
-# ============================================================
+ca = float(lire_indicateur(1, "chiffre_affaires_total"))
 
-# Diagnostic temporaire : vérifier les résultats SQL
-with st.expander("🔎 Diagnostic des indicateurs SQL"):
-    for question in ["question_1", "question_2", "question_3", "question_7"]:
-        st.write(f"Résultats de {question} :")
-        st.write(resultats[question])
-        st.write("Types des colonnes :", resultats[question].dtypes.astype(str))
+panier = float(lire_indicateur(2, "panier_moyen"))
 
-# Question 1 : chiffre d'affaires total
-valeur_ca = resultats["question_1"]["chiffre_affaires_total"].iloc[0]
-st.write("Diagnostic CA :", repr(valeur_ca))
-st.write("Type CA :", type(valeur_ca).__name__)
+pizzas = int(lire_indicateur(3, "total_pizzas_vendues"))
 
-ca = float(valeur_ca)
+df_jours = resultats["question_7"]
 
-# Question 2 : panier moyen
-panier = float(
-    resultats["question_2"]["panier_moyen"].iloc[0]
-)
+if df_jours.empty:
+    st.error("L'analyse des commandes par jour est vide.")
+    st.stop()
 
-# Question 3 : pizzas vendues
-pizzas = int(
-    resultats["question_3"]["total_pizzas_vendues"].iloc[0]
-)
+commandes = int(df_jours["nombre_commandes"].sum())
 
-# Question 7 : nombre total de commandes
-# Les commandes sont regroupées par jour de semaine.
-commandes = int(
-    resultats["question_7"]["nombre_commandes"].sum()
-)
 
 # =====================================================
-# 4. INDICATEURS DE PERFORMANCE
+# 5. KPI
 # =====================================================
 
 st.subheader("📊 Indicateurs de performance")
@@ -126,33 +93,33 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
-        label="Chiffre d'affaires",
-        value=f"{ca:,.2f} $"
+        "Chiffre d'affaires",
+        f"{ca:,.2f} $"
     )
 
 with col2:
     st.metric(
-        label="Commandes",
-        value=f"{commandes:,}"
+        "Commandes",
+        f"{commandes:,}"
     )
 
 with col3:
     st.metric(
-        label="Pizzas vendues",
-        value=f"{pizzas:,}"
+        "Pizzas vendues",
+        f"{pizzas:,}"
     )
 
 with col4:
     st.metric(
-        label="Panier moyen",
-        value=f"{panier:,.2f} $"
+        "Panier moyen",
+        f"{panier:,.2f} $"
     )
 
 st.divider()
 
 
 # =====================================================
-# 5. SYNTHESE DE L'ACTIVITE
+# 6. SYNTHESE DE L'ACTIVITE
 # =====================================================
 
 st.subheader("📋 Synthèse de l'activité")
@@ -171,7 +138,7 @@ st.write(
 
 
 # =====================================================
-# 6. OBJECTIFS METIER
+# 7. OBJECTIFS METIER
 # =====================================================
 
 st.subheader("🎯 Objectifs de l'analyse")
@@ -189,22 +156,14 @@ st.markdown(
 
 
 # =====================================================
-# 7. VERIFICATION DES KPI
+# 8. VERIFICATION DES KPI
 # =====================================================
 
-with st.expander(
-    "🔎 Vérification des indicateurs",
-    expanded=False
-):
-    panier_recalcule = (
-        ca / commandes if commandes > 0 else 0
-    )
+with st.expander("🔎 Vérification des indicateurs"):
 
-    st.write(
-        "Panier moyen SQL :",
-        f"{panier:,.2f} $"
-    )
+    panier_recalcule = ca / commandes if commandes > 0 else 0
 
+    st.write("Panier moyen SQL :", f"{panier:,.2f} $")
     st.write(
         "Panier moyen recalculé :",
         f"{panier_recalcule:,.2f} $"
