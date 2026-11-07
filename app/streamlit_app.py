@@ -1,42 +1,39 @@
+
 # ==================================================
 # PROJET : PLATO'S PIZZA ANALYTICS
-# Application Streamlit
+# Application principale Streamlit
 # ==================================================
 
-# 1. Importer les modules nécessaires
+# 1. IMPORTATION DES MODULES
 import sys
 from pathlib import Path
+
 import streamlit as st
 
 
 # ==================================================
-# 1. CONFIGURATION DES CHEMINS
+# 2. CONFIGURATION DES CHEMINS
 # ==================================================
 
 # Identifier la racine du projet
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# Permet à Streamlit de trouver les fichiers du dossier src
+# Permettre à Python de trouver les modules du dossier src
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ==================================================
-# 2. IMPORTATION DES FONCTIONS PYTHON
+# 3. IMPORTATION DES FONCTIONS DU PROJET
 # ==================================================
 
-# Fonction de création de la base SQLite
 from src.create_db import creer_base
-
-# Fonction de chargement des analyses SQL
 from src.run_analysis import charger_analyses
-
-# Fonction de chargement des données du dashboard
 from src.dashboard_data import charger_donnees_dashboard
 
 
-# =====================================================
-# 3. CONFIGURATION DE STREAMLIT
-# =====================================================
+# ==================================================
+# 4. CONFIGURATION DE STREAMLIT
+# ==================================================
 
 st.set_page_config(
     page_title="Plato's Pizza Analytics",
@@ -45,70 +42,56 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialisation de la base SQLite
+
+# ==================================================
+# 5. INITIALISATION DE LA BASE SQLITE
+# ==================================================
+
 DB_FILE = PROJECT_ROOT / "data" / "pizza.db"
 
+# Créer la base de données uniquement si elle n'existe pas
 if not DB_FILE.exists():
+
     with st.spinner("Initialisation de la base de données..."):
         creer_base()
 
 
-# ============================================
-# DIAGNOSTIC TEMPORAIRE : JOINTURE SQLITE
-# ============================================
-
-import sqlite3
-
-with st.expander("🔎 Diagnostic de la jointure SQLite"):
-
-    with sqlite3.connect(DB_FILE) as conn:
-
-        correspondances = conn.execute("""
-            SELECT COUNT(*)
-            FROM order_details AS od
-            INNER JOIN pizzas AS p
-                ON od.pizza_id = p.pizza_id
-        """).fetchone()[0]
-
-        st.write(
-            "Lignes correspondant à la jointure :",
-            correspondances
-        )
-
-# =====================================================
-# 4. CHARGEMENT DES DONNEES
-# =====================================================
+# ==================================================
+# 6. CHARGEMENT DES DONNEES
+# ==================================================
 
 @st.cache_data
 def charger_donnees():
-    """Charger les 8 analyses SQL."""
+    """Charger les huit analyses SQL."""
     return charger_analyses()
 
 
 @st.cache_data
 def charger_donnees_filtres():
-    """Charger les ventes par mois et categorie."""
+    """Charger les données des ventes par mois et catégorie."""
     return charger_donnees_dashboard()
 
 
-# Charger les deux ensembles de donnees
+# Charger les analyses métier
 resultats = charger_donnees()
 
+# Charger les données utilisées par les filtres
 df_dashboard = charger_donnees_filtres()
 
 
-# =====================================================
-# 5. PARTAGE DES DONNEES ENTRE LES PAGES
-# =====================================================
+# ==================================================
+# 7. PARTAGE DES DONNEES ENTRE LES PAGES
+# ==================================================
 
+# Rendre les données accessibles aux différentes pages
 st.session_state["resultats"] = resultats
 
 st.session_state["df_dashboard"] = df_dashboard
 
 
-# =====================================================
-# 6. MENU DE NAVIGATION
-# =====================================================
+# ==================================================
+# 8. MENU DE NAVIGATION
+# ==================================================
 
 navigation = st.navigation(
     [
@@ -141,9 +124,9 @@ navigation = st.navigation(
 )
 
 
-# =====================================================
-# 7. INFORMATIONS DANS LA BARRE LATERALE
-# =====================================================
+# ==================================================
+# 9. INFORMATIONS DANS LA BARRE LATERALE
+# ==================================================
 
 with st.sidebar:
 
@@ -157,24 +140,9 @@ with st.sidebar:
 
     st.caption("Analyses : SQL + Pandas")
 
-    st.divider()
 
-    # Verification temporaire des donnees
-    with st.expander("🔎 Vérification des données"):
-
-        st.write("Analyses SQL :", len(resultats))
-
-        st.write("Lignes dashboard :", len(df_dashboard))
-
-        st.write(
-            "Colonnes dashboard :",
-            df_dashboard.shape[1]
-        )
-
-
-# =====================================================
-# 8. EXECUTION DE LA PAGE SELECTIONNEE
-# =====================================================
+# ==================================================
+# 10. EXECUTION DE LA PAGE SELECTIONNEE
+# ==================================================
 
 navigation.run()
-
