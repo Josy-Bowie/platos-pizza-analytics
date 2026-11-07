@@ -1,7 +1,13 @@
 
-import streamlit as st
+# =====================================================
+# PROJET : PLATO'S PIZZA ANALYTICS
+# PAGE 4 : ACTIVITE DES COMMANDES
+# =====================================================
+
 import pandas as pd
 import plotly.express as px
+import streamlit as st
+
 
 # =====================================================
 # 1. TITRE DE LA PAGE
@@ -10,67 +16,157 @@ import plotly.express as px
 st.title("🕒 Activité des commandes")
 st.caption("Plato's Pizza | Analyse de l'activité 2015")
 
+
 # =====================================================
-# 2. RECUPERER LES ANALYSES SQL EXISTANTES
+# 2. RECUPERATION DES ANALYSES SQL
 # =====================================================
 
-from src.run_analysis import charger_analyses
+# Les analyses sont déjà chargées dans streamlit_app.py.
+resultats = st.session_state.get("resultats")
 
-@st.cache_data
-def charger_donnees_activite():
-    return charger_analyses()
+if resultats is None:
+    st.error("Les analyses SQL sont indisponibles.")
+    st.stop()
 
-resultats = charger_donnees_activite()
+# Vérifier la présence des analyses nécessaires.
+questions_requises = [
+    "question_7",
+    "question_8"
+]
 
-# Récupérer les deux analyses nécessaires
+for question in questions_requises:
+
+    if question not in resultats:
+        st.error(f"Analyse SQL manquante : {question}")
+        st.stop()
+
+# Copier les DataFrames pour préserver les originaux.
 df_jours = resultats["question_7"].copy()
 df_heures = resultats["question_8"].copy()
 
+
 # =====================================================
-# 3. PREPARER LES DONNEES
+# 3. VERIFICATION DES DONNEES
 # =====================================================
 
-# Définir l'ordre chronologique des jours
+# Vérifier que les analyses ne sont pas vides.
+if df_jours.empty or df_heures.empty:
+    st.error("Les données d'activité sont indisponibles.")
+    st.stop()
+
+# Définir les colonnes nécessaires.
+colonnes_jours = {
+    "jour_semaine",
+    "nombre_commandes",
+    "chiffre_affaires"
+}
+
+colonnes_heures = {
+    "heure",
+    "nombre_commandes"
+}
+
+# Vérifier la présence des colonnes.
+if not colonnes_jours.issubset(df_jours.columns):
+    st.error("Certaines colonnes des jours sont absentes.")
+    st.stop()
+
+if not colonnes_heures.issubset(df_heures.columns):
+    st.error("Certaines colonnes des heures sont absentes.")
+    st.stop()
+
+
+# =====================================================
+# 4. PREPARATION DES DONNEES
+# =====================================================
+
+# Définir l'ordre chronologique des jours.
 ordre_jours = [
-    "Lundi", "Mardi", "Mercredi", "Jeudi",
-    "Vendredi", "Samedi", "Dimanche"
+    "Lundi",
+    "Mardi",
+    "Mercredi",
+    "Jeudi",
+    "Vendredi",
+    "Samedi",
+    "Dimanche"
 ]
 
+# Convertir les valeurs numériques.
+df_jours["nombre_commandes"] = pd.to_numeric(
+    df_jours["nombre_commandes"],
+    errors="coerce"
+)
+
+df_jours["chiffre_affaires"] = pd.to_numeric(
+    df_jours["chiffre_affaires"],
+    errors="coerce"
+)
+
+df_heures["heure"] = pd.to_numeric(
+    df_heures["heure"],
+    errors="coerce"
+)
+
+df_heures["nombre_commandes"] = pd.to_numeric(
+    df_heures["nombre_commandes"],
+    errors="coerce"
+)
+
+# Vérifier les valeurs manquantes ou invalides.
+if (
+    df_jours[list(colonnes_jours)].isna().any().any()
+    or df_heures[list(colonnes_heures)].isna().any().any()
+):
+    st.error("Les données d'activité contiennent des valeurs invalides.")
+    st.stop()
+
+# Organiser les jours dans l'ordre de la semaine.
 df_jours["jour_semaine"] = pd.Categorical(
     df_jours["jour_semaine"],
     categories=ordre_jours,
     ordered=True
 )
 
+# Vérifier que les jours sont reconnus.
+if df_jours["jour_semaine"].isna().any():
+    st.error("Un jour de la semaine est inconnu.")
+    st.stop()
+
 df_jours = df_jours.sort_values("jour_semaine")
 
-# Convertir les heures en nombres entiers
-df_heures["heure"] = pd.to_numeric(
-    df_heures["heure"]
-)
+# Convertir les heures en nombres entiers.
+df_heures["heure"] = df_heures["heure"].astype(int)
 
 df_heures = df_heures.sort_values("heure")
 
+
 # =====================================================
-# 4. CALCULER LES INDICATEURS DE PERFORMANCE
+# 5. CALCUL DES INDICATEURS
 # =====================================================
 
+# Nombre total de commandes.
 total_commandes = int(
     df_jours["nombre_commandes"].sum()
 )
 
+# Jour enregistrant le plus de commandes.
 jour_plus_actif = df_jours.loc[
     df_jours["nombre_commandes"].idxmax()
 ]
 
+# Heure enregistrant le plus de commandes.
 heure_plus_active = df_heures.loc[
     df_heures["nombre_commandes"].idxmax()
 ]
 
-ca_total = df_jours["chiffre_affaires"].sum()
+# Chiffre d'affaires total.
+ca_total = float(
+    df_jours["chiffre_affaires"].sum()
+)
+
 
 # =====================================================
-# 5. AFFICHER LES KPI
+# 6. INDICATEURS DE PERFORMANCE
 # =====================================================
 
 st.subheader("📊 Indicateurs de performance")
@@ -79,32 +175,33 @@ kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
 with kpi1:
     st.metric(
-        "Commandes totales",
-        f"{total_commandes:,.0f}"
+        label="Commandes totales",
+        value=f"{total_commandes:,}"
     )
 
 with kpi2:
     st.metric(
-        "Jour le plus actif",
-        str(jour_plus_actif["jour_semaine"])
+        label="Jour le plus actif",
+        value=str(jour_plus_actif["jour_semaine"])
     )
 
 with kpi3:
     st.metric(
-        "Heure de pointe",
-        f"{int(heure_plus_active['heure']):02d} h"
+        label="Heure de pointe",
+        value=f"{int(heure_plus_active['heure']):02d} h"
     )
 
 with kpi4:
     st.metric(
-        "Chiffre d'affaires",
-        f"{ca_total:,.2f} $"
+        label="Chiffre d'affaires",
+        value=f"{ca_total:,.2f} $"
     )
 
 st.divider()
 
+
 # =====================================================
-# 6. GRAPHIQUE : COMMANDES PAR JOUR
+# 7. GRAPHIQUE : COMMANDES PAR JOUR
 # =====================================================
 
 st.subheader("📅 Nombre de commandes par jour")
@@ -123,7 +220,8 @@ fig_jours = px.bar(
 fig_jours.update_traces(
     marker_color="#2563EB",
     textposition="outside",
-    texttemplate="%{text:,.0f}"
+    texttemplate="%{text:,.0f}",
+    cliponaxis=False
 )
 
 fig_jours.update_layout(
@@ -138,8 +236,9 @@ fig_jours.update_yaxes(rangemode="tozero")
 
 st.plotly_chart(fig_jours, width="stretch")
 
+
 # =====================================================
-# 7. GRAPHIQUE : CHIFFRE D'AFFAIRES PAR JOUR
+# 8. GRAPHIQUE : CHIFFRE D'AFFAIRES PAR JOUR
 # =====================================================
 
 st.subheader("💰 Chiffre d'affaires par jour")
@@ -158,7 +257,8 @@ fig_ca = px.bar(
 fig_ca.update_traces(
     marker_color="#16A34A",
     texttemplate="%{text:,.0f} $",
-    textposition="outside"
+    textposition="outside",
+    cliponaxis=False
 )
 
 fig_ca.update_layout(
@@ -175,8 +275,9 @@ st.plotly_chart(fig_ca, width="stretch")
 
 st.divider()
 
+
 # =====================================================
-# 8. GRAPHIQUE : COMMANDES PAR HEURE
+# 9. GRAPHIQUE : COMMANDES PAR HEURE
 # =====================================================
 
 st.subheader("⏰ Répartition des commandes par heure")
@@ -218,16 +319,24 @@ st.plotly_chart(fig_heures, width="stretch")
 
 st.divider()
 
+
 # =====================================================
-# 9. ANALYSE METIER
+# 10. ANALYSE ET RECOMMANDATIONS METIER
 # =====================================================
 
 st.subheader("💡 Analyse et recommandations métier")
 
+# Récupérer les valeurs des périodes les plus actives.
 jour_leader = str(jour_plus_actif["jour_semaine"])
-commandes_jour = int(jour_plus_actif["nombre_commandes"])
 
-heure_pointe = int(heure_plus_active["heure"])
+commandes_jour = int(
+    jour_plus_actif["nombre_commandes"]
+)
+
+heure_pointe = int(
+    heure_plus_active["heure"]
+)
+
 commandes_heure = int(
     heure_plus_active["nombre_commandes"]
 )
@@ -249,18 +358,21 @@ st.write(
 st.markdown("#### Pistes d'action pour la direction")
 
 st.markdown(
-    "- **Personnel :** adapter les effectifs aux "
-    "jours et heures de forte activité.\n"
-    "- **Préparation :** anticiper les besoins en "
-    "ingrédients avant les heures de pointe.\n"
-    "- **Organisation :** étudier les créneaux "
-    "moins actifs pour optimiser les ressources.\n"
-    "- **Marketing :** envisager des promotions "
-    "sur les périodes moins fréquentées."
+    """
+    - **Personnel :** adapter les effectifs aux jours
+      et heures de forte activité.
+    - **Préparation :** anticiper les besoins en
+      ingrédients avant les heures de pointe.
+    - **Organisation :** étudier les créneaux moins
+      actifs pour optimiser les ressources.
+    - **Marketing :** envisager des promotions sur
+      les périodes moins fréquentées.
+    """
 )
 
+
 # =====================================================
-# 10. VERIFICATION DES DONNEES
+# 11. CONSULTATION DES DONNEES
 # =====================================================
 
 with st.expander("📋 Consulter les données d'activité"):
@@ -281,6 +393,11 @@ with st.expander("📋 Consulter les données d'activité"):
         width="stretch"
     )
 
+    # Contrôle de cohérence des commandes.
+    total_commandes_heures = int(
+        df_heures["nombre_commandes"].sum()
+    )
+
     st.write(
         "Total des commandes (jours) :",
         total_commandes
@@ -288,5 +405,10 @@ with st.expander("📋 Consulter les données d'activité"):
 
     st.write(
         "Total des commandes (heures) :",
-        int(df_heures["nombre_commandes"].sum())
+        total_commandes_heures
     )
+
+    if total_commandes == total_commandes_heures:
+        st.success("Les totaux des commandes sont cohérents.")
+    else:
+        st.warning("Écart détecté entre les totaux.")

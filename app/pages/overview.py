@@ -1,55 +1,56 @@
 
+# =====================================================
+# PROJET : PLATO'S PIZZA ANALYTICS
+# PAGE 1 : VUE D'ENSEMBLE
+# =====================================================
+
+import pandas as pd
 import streamlit as st
-from src.run_analysis import charger_analyses
 
 
 # =====================================================
-# 1. CHARGEMENT DES ANALYSES SQL
+# 1. RECUPERATION DES ANALYSES SQL
 # =====================================================
 
-@st.cache_data
-def charger_donnees():
-    return charger_analyses()
+# Les analyses sont déjà chargées dans streamlit_app.py
+# et partagées entre les pages via session_state.
 
+resultats = st.session_state.get("resultats")
 
-resultats = charger_donnees()
+if resultats is None:
+    st.error("Les analyses SQL ne sont pas disponibles.")
+    st.stop()
 
 
 # =====================================================
-# 2. FONCTION DE VERIFICATION DES INDICATEURS
+# 2. FONCTION DE LECTURE DES INDICATEURS
 # =====================================================
 
 def lire_indicateur(numero_question, colonne):
     """
-    Récupère une valeur numérique depuis un résultat SQL.
-    Arrête la page si le résultat est vide ou manquant.
+    Récupérer une valeur numérique depuis les résultats SQL.
+    Vérifier que l'analyse, la colonne et la valeur existent.
     """
+
     nom_question = f"question_{numero_question}"
 
     if nom_question not in resultats:
-        st.error(f"Analyse SQL absente : {nom_question}")
+        st.error(f"Analyse SQL introuvable : {nom_question}")
         st.stop()
 
     df = resultats[nom_question]
 
-    if df.empty:
-        st.error(f"L'analyse {nom_question} ne retourne aucune ligne.")
-        st.stop()
-
-    if colonne not in df.columns:
+    if df.empty or colonne not in df.columns:
         st.error(
-            f"Colonne '{colonne}' absente dans {nom_question}."
+            f"Données indisponibles pour {nom_question} : {colonne}"
         )
         st.stop()
 
     valeur = df[colonne].iloc[0]
 
-    if valeur is None or st.session_state.get(
-        "_unused_check", False
-    ):
+    if pd.isna(valeur):
         st.error(
-            f"L'analyse {nom_question} retourne une valeur NULL "
-            f"pour '{colonne}'. Vérifie le chargement SQL."
+            f"Valeur manquante pour {nom_question} : {colonne}"
         )
         st.stop()
 
@@ -57,34 +58,52 @@ def lire_indicateur(numero_question, colonne):
 
 
 # =====================================================
-# 3. TITRE
+# 3. TITRE DE LA PAGE
 # =====================================================
 
 st.title("🍕 Vue d'ensemble")
+
 st.caption("Plato's Pizza | Performances commerciales 2015")
 
 
 # =====================================================
-# 4. INDICATEURS SQL
+# 4. RECUPERATION DES INDICATEURS
 # =====================================================
 
-ca = float(lire_indicateur(1, "chiffre_affaires_total"))
+# Chiffre d'affaires total
+ca = float(
+    lire_indicateur(1, "chiffre_affaires_total")
+)
 
-panier = float(lire_indicateur(2, "panier_moyen"))
+# Panier moyen
+panier = float(
+    lire_indicateur(2, "panier_moyen")
+)
 
-pizzas = int(lire_indicateur(3, "total_pizzas_vendues"))
+# Nombre total de pizzas vendues
+pizzas = int(
+    lire_indicateur(3, "total_pizzas_vendues")
+)
 
-df_jours = resultats["question_7"]
+# Nombre total de commandes
+# Chaque commande appartient à un seul jour de la semaine.
 
-if df_jours.empty:
-    st.error("L'analyse des commandes par jour est vide.")
+df_jours = resultats.get("question_7")
+
+if (
+    df_jours is None
+    or df_jours.empty
+    or "nombre_commandes" not in df_jours.columns
+    or df_jours["nombre_commandes"].isna().any()
+):
+    st.error("Les données des commandes sont indisponibles.")
     st.stop()
 
 commandes = int(df_jours["nombre_commandes"].sum())
 
 
 # =====================================================
-# 5. KPI
+# 5. INDICATEURS DE PERFORMANCE
 # =====================================================
 
 st.subheader("📊 Indicateurs de performance")
@@ -93,26 +112,26 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
-        "Chiffre d'affaires",
-        f"{ca:,.2f} $"
+        label="Chiffre d'affaires",
+        value=f"{ca:,.2f} $"
     )
 
 with col2:
     st.metric(
-        "Commandes",
-        f"{commandes:,}"
+        label="Commandes",
+        value=f"{commandes:,}"
     )
 
 with col3:
     st.metric(
-        "Pizzas vendues",
-        f"{pizzas:,}"
+        label="Pizzas vendues",
+        value=f"{pizzas:,}"
     )
 
 with col4:
     st.metric(
-        "Panier moyen",
-        f"{panier:,.2f} $"
+        label="Panier moyen",
+        value=f"{panier:,.2f} $"
     )
 
 st.divider()
@@ -156,14 +175,23 @@ st.markdown(
 
 
 # =====================================================
-# 8. VERIFICATION DES KPI
+# 8. VERIFICATION DE COHERENCE DES KPI
 # =====================================================
 
-with st.expander("🔎 Vérification des indicateurs"):
+with st.expander(
+    "🔎 Vérification des indicateurs",
+    expanded=False
+):
 
-    panier_recalcule = ca / commandes if commandes > 0 else 0
+    panier_recalcule = (
+        ca / commandes if commandes > 0 else 0
+    )
 
-    st.write("Panier moyen SQL :", f"{panier:,.2f} $")
+    st.write(
+        "Panier moyen SQL :",
+        f"{panier:,.2f} $"
+    )
+
     st.write(
         "Panier moyen recalculé :",
         f"{panier_recalcule:,.2f} $"

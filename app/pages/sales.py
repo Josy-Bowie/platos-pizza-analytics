@@ -1,29 +1,45 @@
 
-import streamlit as st
+# =====================================================
+# PROJET : PLATO'S PIZZA ANALYTICS
+# PAGE 2 : ANALYSE DES VENTES
+# =====================================================
+
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 
-from src.dashboard_data import charger_donnees_dashboard
 
 # =====================================================
-# 1. TITRE ET CHARGEMENT DES DONNEES
+# 1. RECUPERATION DES DONNEES
 # =====================================================
 
 st.title("📈 Analyse des ventes")
 st.caption("Plato's Pizza | Performances commerciales 2015")
 
-@st.cache_data
-def charger_donnees():
-    return charger_donnees_dashboard()
+# Les données sont déjà chargées dans streamlit_app.py.
+donnees = st.session_state.get("df_dashboard")
 
-df = charger_donnees().copy()
+if donnees is None or donnees.empty:
+    st.error("Les données des ventes sont indisponibles.")
+    st.stop()
+
+df = donnees.copy()
+
+colonnes_requises = {
+    "mois",
+    "categorie",
+    "chiffre_affaires",
+    "pizzas_vendues"
+}
+
+if not colonnes_requises.issubset(df.columns):
+    st.error("Certaines colonnes nécessaires sont absentes.")
+    st.stop()
 
 
 # =====================================================
 # 2. PREPARATION DES DONNEES
 # =====================================================
-
-df["mois"] = pd.to_datetime(df["mois"], format="%Y-%m-%d")
 
 mois_fr = [
     "Janvier", "Février", "Mars", "Avril",
@@ -31,17 +47,25 @@ mois_fr = [
     "Septembre", "Octobre", "Novembre", "Décembre"
 ]
 
+df["mois"] = pd.to_datetime(df["mois"], errors="coerce")
+
+for colonne in ["chiffre_affaires", "pizzas_vendues"]:
+    df[colonne] = pd.to_numeric(df[colonne], errors="coerce")
+
+if df[list(colonnes_requises)].isna().any().any():
+    st.error("Les données contiennent des valeurs manquantes ou invalides.")
+    st.stop()
+
 df["numero_mois"] = df["mois"].dt.month
 df["mois_label"] = df["numero_mois"].map(
     dict(enumerate(mois_fr, start=1))
 )
 
-categories_disponibles = sorted(
-    df["categorie"].unique().tolist()
-)
+categories_disponibles = sorted(df["categorie"].unique())
 
 ca_global = df["chiffre_affaires"].sum()
 pizzas_global = df["pizzas_vendues"].sum()
+
 
 # =====================================================
 # 3. FILTRES INTERACTIFS
@@ -56,7 +80,7 @@ with col_filtre1:
         "Période d'analyse",
         options=list(range(1, 13)),
         value=(1, 12),
-        format_func=lambda m: mois_fr[m - 1]
+        format_func=lambda mois: mois_fr[mois - 1]
     )
 
 with col_filtre2:
@@ -67,18 +91,21 @@ with col_filtre2:
         placeholder="Choisir les catégories"
     )
 
+
 # =====================================================
 # 4. APPLICATION DES FILTRES
 # =====================================================
 
 mois_debut, mois_fin = periode
 
-df_categories_choisies = df[
+# Filtrer d'abord les catégories.
+df_categories = df[
     df["categorie"].isin(categories_selectionnees)
 ].copy()
 
-df_filtre = df_categories_choisies[
-    df_categories_choisies["numero_mois"].between(
+# Puis filtrer la période.
+df_filtre = df_categories[
+    df_categories["numero_mois"].between(
         mois_debut, mois_fin
     )
 ].copy()
@@ -87,8 +114,9 @@ if df_filtre.empty:
     st.warning("Aucune donnée pour cette sélection.")
     st.stop()
 
+
 # =====================================================
-# 5. KPI ET COMPARAISONS
+# 5. INDICATEURS DE PERFORMANCE
 # =====================================================
 
 ca_filtre = df_filtre["chiffre_affaires"].sum()
@@ -96,15 +124,15 @@ pizzas_filtrees = df_filtre["pizzas_vendues"].sum()
 
 part_ca = (
     ca_filtre / ca_global * 100
-    if ca_global != 0 else 0
+    if ca_global > 0 else 0
 )
 
 part_pizzas = (
     pizzas_filtrees / pizzas_global * 100
-    if pizzas_global != 0 else 0
+    if pizzas_global > 0 else 0
 )
 
-st.markdown("### Indicateurs de performance")
+st.subheader("📊 Indicateurs de performance")
 
 kpi1, kpi2, kpi3 = st.columns(3)
 
@@ -133,55 +161,65 @@ st.caption(
 
 st.divider()
 
+
 # =====================================================
-# 6. PREPARER LES COMPARAISONS MENSUELLES
+# 6. CALCUL DE L'EVOLUTION MENSUELLE
 # =====================================================
 
-# On conserve tous les mois pour calculer les évolutions.
-# Le filtre de catégories est appliqué avant le calcul.
+# Calculer le CA mensuel pour les catégories choisies.
+# On conserve tous les mois avant de filtrer la période,
+# afin de comparer chaque mois au mois précédent.
 
 df_evolution = (
-    df_categories_choisies
+    df_categories
     .groupby(["numero_mois", "mois_label"], as_index=False)
     .agg(chiffre_affaires=("chiffre_affaires", "sum"))
     .sort_values("numero_mois")
 )
 
-# pct_change compare chaque mois au précédent.
-# fill_method=None évite le remplissage automatique.
-
-df_evolution["evolution_pct"] = (
-    df_evolution["chiffre_affaires"]
-    .pct_change(fill_method=None) * 100
+# Créer la référence du mois précédent.
+df_evolution["ca_precedent"] = (
+    df_evolution["chiffre_affaires"].shift(1)
 )
 
-# Une variation en pourcentage n'est pas définie
-# lorsque le chiffre d'affaires précédent est nul.
+df_evolution["numero_precedent"] = (
+    df_evolution["numero_mois"].shift(1)
+)
 
-ca_precedent = df_evolution["chiffre_affaires"].shift(1)
+# Calculer la variation en pourcentage.
+df_evolution["evolution_pct"] = (
+    (
+        df_evolution["chiffre_affaires"]
+        - df_evolution["ca_precedent"]
+    )
+    / df_evolution["ca_precedent"]
+    * 100
+)
+
+# Une variation n'est pas calculable si le mois
+# précédent est absent ou si son CA est nul.
+comparaison_invalide = (
+    (df_evolution["ca_precedent"] == 0)
+    | (
+        df_evolution["numero_mois"]
+        - df_evolution["numero_precedent"] != 1
+    )
+)
 
 df_evolution.loc[
-    ca_precedent == 0, "evolution_pct"
+    comparaison_invalide, "evolution_pct"
 ] = float("nan")
 
-# Vérifier que les mois comparés sont consécutifs.
-numero_precedent = df_evolution["numero_mois"].shift(1)
-
-df_evolution.loc[
-    (df_evolution["numero_mois"] - numero_precedent) != 1,
-    "evolution_pct"
-] = float("nan")
-
-# Conserver uniquement les mois visibles dans le dashboard.
-
+# Conserver les mois de la période sélectionnée.
 df_mensuel = df_evolution[
     df_evolution["numero_mois"].between(
         mois_debut, mois_fin
     )
 ].copy()
 
+
 # =====================================================
-# 7. GRAPHIQUE DU CHIFFRE D'AFFAIRES MENSUEL
+# 7. EVOLUTION DU CHIFFRE D'AFFAIRES
 # =====================================================
 
 st.subheader("📊 Évolution du chiffre d'affaires mensuel")
@@ -217,17 +255,13 @@ fig_mensuel.update_layout(
     yaxis_title="Chiffre d'affaires ($)"
 )
 
-fig_mensuel.update_xaxes(
-    categoryorder="array",
-    categoryarray=mois_fr
-)
-
 fig_mensuel.update_yaxes(rangemode="tozero")
 
 st.plotly_chart(fig_mensuel, width="stretch")
 
+
 # =====================================================
-# 8. NOUVEAU GRAPHIQUE : VARIATION MENSUELLE DU CA
+# 8. VARIATION MENSUELLE DU CA
 # =====================================================
 
 st.subheader("📉 Variation du chiffre d'affaires par mois")
@@ -243,9 +277,10 @@ df_variations = df_mensuel.dropna(
 
 if df_variations.empty:
     st.info(
-        "Aucune variation mensuelle calculable pour "
-        "la sélection actuelle."
+        "Aucune variation mensuelle calculable "
+        "pour cette sélection."
     )
+
 else:
     df_variations["tendance"] = df_variations[
         "evolution_pct"
@@ -290,14 +325,12 @@ else:
         margin=dict(l=20, r=20, t=30, b=30),
         xaxis_title="Mois",
         yaxis_title="Variation du CA (%)",
-        legend_title="Évolution",
         bargap=0.30
     )
 
     st.plotly_chart(fig_variation, width="stretch")
 
-    # Identifier les meilleures et moins bonnes évolutions.
-
+    # Identifier les plus fortes variations.
     plus_forte_hausse = df_variations.loc[
         df_variations["evolution_pct"].idxmax()
     ]
@@ -331,13 +364,14 @@ else:
 
 st.divider()
 
+
 # =====================================================
-# 9. GRAPHIQUE DU CA PAR CATEGORIE
+# 9. CHIFFRE D'AFFAIRES PAR CATEGORIE
 # =====================================================
 
 st.subheader("🍕 Chiffre d'affaires par catégorie")
 
-df_categories = (
+df_ca_categories = (
     df_filtre
     .groupby("categorie", as_index=False)
     .agg(chiffre_affaires=("chiffre_affaires", "sum"))
@@ -345,7 +379,7 @@ df_categories = (
 )
 
 fig_categories = px.bar(
-    df_categories,
+    df_ca_categories,
     x="chiffre_affaires",
     y="categorie",
     orientation="h",
@@ -380,8 +414,9 @@ st.plotly_chart(fig_categories, width="stretch")
 
 st.divider()
 
+
 # =====================================================
-# 10. ANALYSE ET RECOMMANDATIONS METIER
+# 10. SYNTHESE ET RECOMMANDATIONS METIER
 # =====================================================
 
 st.subheader("💡 Analyse et recommandations métier")
@@ -390,44 +425,48 @@ meilleur_mois = df_mensuel.loc[
     df_mensuel["chiffre_affaires"].idxmax()
 ]
 
-meilleure_categorie = df_categories.loc[
-    df_categories["chiffre_affaires"].idxmax()
+meilleure_categorie = df_ca_categories.loc[
+    df_ca_categories["chiffre_affaires"].idxmax()
 ]
-
 
 st.markdown(
     f"""
     **Synthèse des performances sélectionnées**
 
     Le mois le plus performant est
-    **{meilleur_mois['mois_label']}**, avec un chiffre
-    d'affaires de **{meilleur_mois['chiffre_affaires']:,.2f} $**.
+    **{meilleur_mois['mois_label']}**,
+    avec un chiffre d'affaires de
+    **{meilleur_mois['chiffre_affaires']:,.2f} $**.
 
     La catégorie dominante est
-    **{meilleure_categorie['categorie']}**, avec un chiffre
-    d'affaires de **{meilleure_categorie['chiffre_affaires']:,.2f} $**.
+    **{meilleure_categorie['categorie']}**,
+    avec un chiffre d'affaires de
+    **{meilleure_categorie['chiffre_affaires']:,.2f} $**.
     """
 )
-
 
 st.markdown("#### Pistes d'action pour la direction")
 
 st.markdown(
-    "- **Stocks :** examiner les besoins en ingrédients "
-    "des catégories les plus vendues.\n"
-    "- **Planification :** analyser les périodes de forte "
-    "activité pour adapter les ressources.\n"
-    "- **Marketing :** étudier les catégories moins "
-    "performantes avant de lancer des promotions.\n"
-    "- **Suivi mensuel :** examiner les baisses de chiffre "
-    "d'affaires pour identifier leurs causes possibles."
+    """
+    - **Stocks :** examiner les besoins en ingrédients
+      des catégories les plus vendues.
+    - **Planification :** analyser les périodes de forte
+      activité pour adapter les ressources.
+    - **Marketing :** étudier les catégories moins
+      performantes avant de lancer des promotions.
+    - **Suivi mensuel :** examiner les baisses de chiffre
+      d'affaires pour identifier leurs causes possibles.
+    """
 )
 
+
 # =====================================================
-# 11. CONTROLE DES DONNEES
+# 11. CONSULTATION DES DONNEES
 # =====================================================
 
 with st.expander("📋 Consulter les données filtrées"):
+
     st.dataframe(
         df_filtre[
             [
@@ -442,6 +481,7 @@ with st.expander("📋 Consulter les données filtrées"):
     )
 
     st.write("Lignes sélectionnées :", len(df_filtre))
+
     st.write(
         "Part des pizzas vendues :",
         f"{part_pizzas:.2f} %"
