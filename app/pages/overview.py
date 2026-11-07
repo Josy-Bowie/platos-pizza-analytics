@@ -14,6 +14,20 @@ def charger_donnees():
 
 resultats = charger_donnees()
 
+# ==================================================
+# DIAGNOSTIC : VÉRIFICATION DES RÉSULTATS SQL
+# ==================================================
+
+with st.expander("🔎 Diagnostic des résultats SQL"):
+    st.write("Résultat de la question 1 :")
+    st.dataframe(resultats["question_1"])
+
+    st.write("Résultat de la question 2 :")
+    st.dataframe(resultats["question_2"])
+
+    st.write("Résultat de la question 3 :")
+    st.dataframe(resultats["question_3"])
+
 
 # =====================================================
 # 2. TITRE DE LA PAGE
